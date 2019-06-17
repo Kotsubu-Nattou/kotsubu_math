@@ -4,7 +4,8 @@
 // ・概要
 //   数学で使う定数とメソッド集。
 //   基本的にベクトルは、OpenSiv3DのVec2で運用することを前提とした。
-//   もし、struct_vecのVec2を使う場合は、ファイル冒頭で"USE_STRUCT_VEC"をdefineする。
+//   もし、クラスstruct_vecのVEC2を使う場合は、このファイル冒頭、または
+//   このファイルをインクルードする前に、"USE_STRUCT_VEC"をdefineしておく。
 //
 // ・使用例
 //   MyMath math;
@@ -14,8 +15,7 @@
 #pragma once
 
 // @ Vec2の定義
-// struct_vecのVec2を使う場合は、下行のコメントを外すか
-// このファイルのインクルード前に、"USE_STRUCT_VEC"をdefineしておく
+// クラスstruct_vecのVec2を利用する場合はコメントを外す。
 //#define USE_STRUCT_VEC
 
 #include <cmath>
@@ -29,10 +29,14 @@
 
 
 
+///////////////////////////////////////////////////////////////////////////////////////////////
+// 【クラス】MyMath
+//
 class MyMath {
-// @ struct_vecのVec2を利用
+
 #ifdef USE_STRUCT_VEC
-    using Vec2 = VEC2<double>;
+protected:
+    using Vec2 = VEC2<double>;  // クラスstruct_vecのVEC2
 #endif
     
 
