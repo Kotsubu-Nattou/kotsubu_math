@@ -1,19 +1,20 @@
-///////////////////////////////////////////////////////////////////////////////////////////////
-// 【ヘッダオンリークラス】my_math
-//
-// ・概要
-//   数学で使う定数とメソッドを集めたシングルトン。
-//   一部のメソッド、および全ての定数はstaticなので、インクルードだけで利用可能。
-//   基本的にベクトルは、OpenSiv3DのVec2で運用することを前提とした。
-//   もし、クラスstruct_vecのVEC2を使う場合は、このファイル冒頭、または
-//   このファイルをインクルードする前に、"USE_STRUCT_VEC"をdefineしておく。
-//
-// ・使用例
-//   #include "MyMath.h"
-//   n = MyMath::Pi;
-//   MyMath &math = MyMath::getInstance();
-//   n = math.direction(v);
-///////////////////////////////////////////////////////////////////////////////////////////////
+/**********************************************************************************************
+【ヘッダオンリークラス】my_math
+
+・概要
+  数学で使う定数とメソッドを集めたシングルトン。
+  一部のメソッド、および全ての定数はstaticなので、インクルードだけで利用可能。
+  基本的にベクトルは、OpenSiv3DのVec2で運用することを前提とした。
+  もし、クラスstruct_vecのVEC2を使う場合は、このファイル冒頭、または
+  このファイルをインクルードする前に、"USE_STRUCT_VEC"をdefineしておく。
+
+・利用例
+  #include "MyMath.h"
+  n = MyMath::Pi;                        // 定数はインクルードするだけで利用可能
+  MyMath &math = MyMath::getInstance();  // 唯一のインスタンスを取得。初めての場合、
+                                         // 数学用テーブルが初期化され利用可能となる。
+  n = math.direction(v);                 // 通常の定数、メソッドの利用例
+***********************************************************************************************/
 
 #pragma once
 
@@ -29,7 +30,7 @@
 #endif
 
 
-#include <iostream>
+
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -233,6 +234,7 @@ public:
 
 
     // 【メソッド】唯一のインスタンスを返す
+    // なるべく計算のロジックに近い所で受け取るようにすると、キャッシュが効くためか高速化する
     static MyMath& getInstance()
     {
         static MyMath inst;
@@ -244,7 +246,25 @@ public:
 
 
 private:
-    // @ 隠しメソッド
+    // @@@ テーブル構造体
+    struct SinTable
+    {
+        static constexpr int Resolution  = 2000;
+        static constexpr int TableMax    = static_cast<int>(Pi * Resolution);
+        static constexpr int ScaledTwoPi = static_cast<int>(TwoPi * Resolution);
+        double table[TableMax];
+    } Sin;
+
+    struct AsinTable
+    {
+        static constexpr int Resolution  = 3000;
+        static constexpr int TableMax    = Resolution;
+        double table[TableMax];
+    } Asin;
+
+
+
+    // @@@ 隠しメソッド
     MyMath()  // 隠しコンストラクタ
     {
         // sinテーブルを作成（cos兼用）
@@ -264,22 +284,4 @@ private:
     ~MyMath(){}                        // 隠しデストラクタ
     MyMath(const MyMath&);             // 隠しコピーコンストラクタ
     MyMath& operator=(const MyMath&);  // 隠しコピー代入演算子
-
-
-
-    // @ テーブル構造体
-    struct SinTable
-    {
-        static constexpr int Resolution  = 2000;
-        static constexpr int TableMax    = static_cast<int>(Pi * Resolution);
-        static constexpr int ScaledTwoPi = static_cast<int>(TwoPi * Resolution);
-        double table[TableMax];
-    } Sin;
-
-    struct AsinTable
-    {
-        static constexpr int Resolution  = 3000;
-        static constexpr int TableMax    = Resolution;
-        double table[TableMax];
-    } Asin;
 };
