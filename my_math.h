@@ -2,20 +2,23 @@
 // 【ヘッダオンリークラス】my_math
 //
 // ・概要
-//   数学で使う定数とメソッド集。
+//   数学で使う定数とメソッドを集めたシングルトン。
+//   一部のメソッド、および全ての定数はstaticなので、インクルードだけで利用可能。
 //   基本的にベクトルは、OpenSiv3DのVec2で運用することを前提とした。
 //   もし、クラスstruct_vecのVEC2を使う場合は、このファイル冒頭、または
 //   このファイルをインクルードする前に、"USE_STRUCT_VEC"をdefineしておく。
 //
 // ・使用例
-//   MyMath math;
-//   n = math.Pi;
+//   #include "MyMath.h"
+//   n = MyMath::Pi;
+//   MyMath &math = MyMath::getInstance();
+//   n = math.direction(v);
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
 
 // @ Vec2の定義
-// クラスstruct_vecのVec2を利用する場合はコメントを外す。
+// クラスstruct_vecのVEC2を利用する場合はコメントを外す。
 //#define USE_STRUCT_VEC
 
 #include <cmath>
@@ -26,7 +29,7 @@
 #endif
 
 
-
+#include <iostream>
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -35,7 +38,6 @@
 class MyMath {
 
 #ifdef USE_STRUCT_VEC
-protected:
     using Vec2 = VEC2<double>;  // クラスstruct_vecのVEC2
 #endif
     
@@ -54,26 +56,6 @@ public:
     static constexpr double One        = 1.0;               // double 1.0
     static constexpr double Two        = 2.0;               // double 2.0
     static constexpr double Half       = 0.5;               // double 0.5
-
-
-
-    // 【コンストラクタ】
-    MyMath()
-    {
-        // sinテーブルを作成（cos兼用）
-        double n;
-        for (int i = 0; i < Sin.TableMax; ++i) {
-            n = std::sin(static_cast<double>(i) / Sin.Resolution);
-            Sin.table[i] = (n < Epsilon) ? 0.0 : n;
-        }
-        
-        // asinテーブルを作成（acos兼用）
-        double max = Asin.TableMax - 1;
-        for (int i = 0; i < Asin.TableMax; ++i) {
-            n = std::asin(sqrt(i / max));
-            Asin.table[i] = (n < Epsilon) ? 0.0 : n;
-        }
-    }
 
 
 
@@ -250,9 +232,41 @@ public:
 
 
 
+    // 【メソッド】唯一のインスタンスを返す
+    static MyMath& getInstance()
+    {
+        static MyMath inst;
+        return inst;
+    }
+
+
+
 
 
 private:
+    // @ 隠しメソッド
+    MyMath()  // 隠しコンストラクタ
+    {
+        // sinテーブルを作成（cos兼用）
+        double n;
+        for (int i = 0; i < Sin.TableMax; ++i) {
+            n = std::sin(static_cast<double>(i) / Sin.Resolution);
+            Sin.table[i] = (n < Epsilon) ? 0.0 : n;
+        }
+        
+        // asinテーブルを作成（acos兼用）
+        double max = Asin.TableMax - 1;
+        for (int i = 0; i < Asin.TableMax; ++i) {
+            n = std::asin(sqrt(i / max));
+            Asin.table[i] = (n < Epsilon) ? 0.0 : n;
+        }
+    }
+    ~MyMath(){}                        // 隠しデストラクタ
+    MyMath(const MyMath&);             // 隠しコピーコンストラクタ
+    MyMath& operator=(const MyMath&);  // 隠しコピー代入演算子
+
+
+
     // @ テーブル構造体
     struct SinTable
     {
