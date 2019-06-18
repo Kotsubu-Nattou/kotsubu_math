@@ -12,7 +12,7 @@
   #include "MyMath.h"
   n = MyMath::Pi;                        // 定数はインクルードするだけで利用可能
   MyMath &math = MyMath::getInstance();  // 唯一のインスタンスを取得。初めての場合、
-                                         // 数学用テーブルが初期化され利用可能となる。
+                                         // 数学用テーブルが作成され利用可能となる。
   n = math.direction(v);                 // 通常の定数、メソッドの利用例
 ***********************************************************************************************/
 
@@ -57,6 +57,17 @@ public:
     static constexpr double One        = 1.0;               // double 1.0
     static constexpr double Two        = 2.0;               // double 2.0
     static constexpr double Half       = 0.5;               // double 0.5
+
+
+
+    // 【メソッド】唯一のインスタンスを返す
+    // なるべく計算のロジックに近い所で受け取るようにすると、キャッシュに乗るためか高速化する。
+    // 初回時のみ、数学用テーブルが作成されるため、処理コストが高い
+    static MyMath& getInstance()
+    {
+        static MyMath inst;
+        return inst;
+    }
 
 
 
@@ -229,16 +240,6 @@ public:
     {
         return { v.x * cosVal - v.y * sinVal,
                  v.x * sinVal + v.y * cosVal };
-    }
-
-
-
-    // 【メソッド】唯一のインスタンスを返す
-    // なるべく計算のロジックに近い所で受け取るようにすると、キャッシュに乗るためか高速化する
-    static MyMath& getInstance()
-    {
-        static MyMath inst;
-        return inst;
     }
 
 
