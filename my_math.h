@@ -11,9 +11,8 @@
 ・利用例
   #include "MyMath.h"
   n = MyMath::Pi;                        // 定数はインクルードするだけで利用可能
-  MyMath &math = MyMath::getInstance();  // 唯一のインスタンスを取得。初めての場合、
-                                         // 数学用テーブルが作成され利用可能となる。
-  n = math.direction(v);                 // 通常の定数、メソッドの利用例
+  MyMath &math = MyMath::getInstance();  // 唯一のインスタンスを取得。全てのメンバにアクセス可能となる
+  n = math.direction(v);
 ***********************************************************************************************/
 
 #pragma once
