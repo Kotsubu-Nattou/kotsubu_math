@@ -1,8 +1,8 @@
 #include <iostream>
 #include <cmath>
-#include "struct_vec.h"
-#define USE_STRUCT_VEC
-#include "my_math.h"
+#include "kotsubu_vec.h"
+#define USE_KOTSUBU_VEC
+#include "kotsubu_math.h"
 using namespace std;
 
 
@@ -10,7 +10,7 @@ using namespace std;
 // クラスmy_mathのテストプログラム
 int main()
 {
-    MyMath& math = MyMath::getInstance();
+    KotsubuMath& math = KotsubuMath::getInstance();
 
     // for (int i=-14; i<=14; ++i) {
     //     double rad = TwoPi * i / 12;

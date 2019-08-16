@@ -51,4 +51,4 @@ clean:
 
 
 # ヘッダファイルの依存関係   ### 記入項目 ###
-a.o: my_math.h
+a.o: kotsubu_math.h
