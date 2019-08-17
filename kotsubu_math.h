@@ -53,23 +53,23 @@ public:
     struct Line
     {
         Vec2 startPos, endPos;
-        Line(Vec2 startPos, Vec2 endPos) : startPos(startPos), endPos(endPos)
-        {}
+        Line() : startPos(Vec2(0.0, 0.0)), endPos(Vec2(0.0, 0.0)) {}
+        Line(Vec2 startPos, Vec2 endPos) : startPos(startPos), endPos(endPos) {}
     };
 
     struct Rect
     {
         double left, top, right, bottom;
-        Rect(double left, double top, double right, double bottom) : left(left), top(top), right(right), bottom(bottom)
-        {}
+        Rect() : left(0.0), top(0.0), right(0.0), bottom(0.0) {}
+        Rect(double left, double top, double right, double bottom) : left(left), top(top), right(right), bottom(bottom) {}
     };
 
     struct Circle
     {
         Vec2 pos;
         double radius;
-        Circle(Vec2 pos, double radius) : pos(pos), radius(radius)
-        {}
+        Circle() : pos(Vec2(0.0, 0.0)), radius(0.0) {}
+        Circle(Vec2 pos, double radius) : pos(pos), radius(radius) {}
     };
 
 
@@ -104,6 +104,7 @@ public:
     // 数学メソッド
 
     // 【メソッド】sin（テーブル引き）
+    // radianに「1周 + 30°」を指定した場合は、周を省いた「30°」で計算する（負数も同様）
     double sin(double radian)
     {
         int id = abs(static_cast<int>(radian * Sin.Resolution)) % Sin.ScaledTwoPi;
@@ -119,6 +120,7 @@ public:
 
 
     // 【メソッド】cos（テーブル引き）
+    // radianに「1周 + 30°」を指定した場合は、周を省いた「30°」で計算する（負数も同様）
     double cos(double radian)
     {
         return sin(radian + RightAngle);
@@ -127,6 +129,10 @@ public:
 
 
     // 【メソッド】asin（テーブル引き）
+    // ＜戻り値＞ 
+    // ratio >  1  ---  ratioが 1のときの値を返す
+    // ratio < -1  ---  ratioが-1のときの値を返す
+    // 上記は<cmath>の場合、NaNを返す
     double asin(double ratio)
     {
         int id = abs(static_cast<int>(ratio * ratio * Asin.TableMax + RoundFix));
@@ -138,6 +144,10 @@ public:
 
 
     // 【メソッド】acos（テーブル引き）
+    // ＜戻り値＞ 
+    // ratio >  1  ---  ratioが 1のときの値を返す
+    // ratio < -1  ---  ratioが-1のときの値を返す
+    // 上記は<cmath>の場合、NaNを返す
     double acos(double ratio)
     {
         return RightAngle - asin(ratio);
@@ -228,6 +238,7 @@ public:
 
     // 【メソッド】ベクトルの向きを返す（スクリーン座標系。atan2の代わりに使えて高速）
     // ＜戻り値＞ -180°から180°のradian
+    // 例外以外は、std::atan2に準拠
     double direction(double vx, double vy)
     {
         double len = sqrt(vx * vx + vy * vy);
@@ -245,11 +256,23 @@ public:
 
 
 
-    // 【メソッド】2ベクトル間の角度を返す
-    // ＜戻り値＞ -180°から180°のradian
+    // 【メソッド】ベクトルaから見た「bの方向」を返す
+    // ＜戻り値＞ -180°から180°のradian（時計回りを正）
+    // aから見たbの方向は、+と-の2通りが存在する。このメソッドでは近い方（±180°を超えない方）を返す。
+    // よって、戻り値の符号だけ（-0.1とか0.1）をaに足し込むと、段々bの方に向かせることができる。
+    // また、bがaの「左右どちらにあるか」の判定にも使えるが、外積のほうが高速。
+    // ・戻り値の範囲違いの類似処理
+    // direction(b) - direction(a)  ---  -360°から360°（高速。-10°の方が近くても350°になったりする）
+    // fmod(direction(b) - direction(a) + TwoPi, TwoPi)  ---  0°から360°
     double angle(Vec2 a, Vec2 b)
     {
-        return fmod(direction(b) - direction(a), TwoPi);
+        double rad = direction(b) - direction(a);
+        if (rad > Pi)
+            rad -= TwoPi;  //  200°等であれば-160°とする
+        else if (rad < -Pi)
+            rad += TwoPi;  // -200°等であれば 160°とする
+
+        return rad;
     }
 
 
@@ -355,12 +378,12 @@ public:
         // 【メソッド】底辺の長さを返す（内積）
         // 斜辺abと傾き(斜辺と底辺の内角)から直角三角形を定義して、底辺の長さを算出する
         // ＜引数＞ 斜辺abの座標、傾き(斜辺と底辺の内角)の弧度
-        double baseLen(Vec2 a, Vec2 b, double hypotTilt)
+        double baseLen(Vec2 a, Vec2 b, double bAngle)
         {
             KotsubuMath& math = getInstance();  // 親クラスの静的ではないメソッドを利用する
             Vec2   abV(a - b);                                  // 斜辺ベクトル
             double abDir = math.direction(abV);                 // 斜辺の傾き
-            double bcDir = fmod(abDir + hypotTilt, TwoPi);      // 底辺の傾き
+            double bcDir = fmod(abDir + bAngle, TwoPi);         // 底辺の傾き
             Vec2   bcNormal(math.cos(bcDir), math.sin(bcDir));  // 底辺の正規化ベクトル
 
             // 直角三角形の底辺長 = abと正規化bcの内積
@@ -392,25 +415,25 @@ public:
 
         // 【メソッド】高さを返す（外積）
         // 斜辺abと傾き(斜辺と底辺の内角)から直角三角形を定義して、底辺の長さを算出する
-        // ＜引数＞ 斜辺abの座標、傾き(斜辺と底辺の内角)の弧度
-        double height(Vec2 a, Vec2 b, double hypotTilt)
+        // ＜引数＞ 斜辺abの座標、斜辺の傾き（radian）
+        double height(Vec2 a, Vec2 b, double bAngle)
         {
             KotsubuMath& math = getInstance();  // 親クラスの静的ではないメソッドを利用する
             Vec2   abV(a - b);                                  // 斜辺ベクトル
             double abDir = math.direction(abV);                 // 斜辺の傾き
-            double bcDir = fmod(abDir + hypotTilt, TwoPi);      // 底辺の傾き
+            double bcDir = abDir + bAngle;                      // 底辺の傾き
             Vec2   bcNormal(math.cos(bcDir), math.sin(bcDir));  // 底辺の正規化ベクトル
 
-            // 直角三角形の底辺長 = abと正規化bcの外積
-            // これは、点aの線分bcに対する「垂線」に相当。
-            // 点が線分の「左右どちらにあるかで符号が変わる」ため絶対値にする
+            // 直角三角形の高さ = abと正規化bcの外積。
+            // これは、点aを通る線分bcの「垂線」に相当。
+            // absは、点が線分の「左右どちらにあるかで符号が変わる」ため
             return abs(outerProduct(abV, bcNormal));
         }
 
 
 
-        // 【メソッド】底辺の終点座標を返す
-        // 斜辺abと長さ不定の底辺bcから直角三角形を定義して、底辺の終点座標を算出する。
+        // 【メソッド】底辺終点（頂点c）の座標を返す
+        // 斜辺abと長さ不定の底辺bcから直角三角形を定義して、頂点cの座標を算出する。
         // これは、斜辺を地面に正投影したときの「影の終わりの位置」、または底辺と高さの「交点」に相当。
         // ＜引数＞ 斜辺ab、底辺bcの座標（底辺の長さは適当でよい）
         static Vec2 baseEndPos(Vec2 a, Vec2 b, Vec2 c)
@@ -427,16 +450,18 @@ public:
         
 
 
-        // 【メソッド】底辺の終点座標を返す
-        // 斜辺abと傾き(斜辺と底辺の内角)から直角三角形を定義して、底辺の終点座標を算出する。
+        // 【メソッド】底辺終点（頂点c）の座標を返す
+        // 斜辺abと傾き（斜辺から見た底辺の方向）から直角三角形を定義して、頂点cの座標を算出する。
         // これは、斜辺を地面に正投影したときの「影の終わりの位置」、または底辺と高さの「交点」に相当。
-        // ＜引数＞ 斜辺abの座標、傾き(斜辺と底辺の内角)の弧度
-        Vec2 baseEndPos(Vec2 a, Vec2 b, double hypotTilt)
+        // ＜引数＞ 斜辺abの座標、斜辺の傾き（radian）
+        // 斜辺の傾きは、通常±90°未満を指定する。正で反時計回り、負で時計回りの図形となる。
+        // また、±90°を超えると「高さの辺」が斜辺をまたいで図形が反転する。
+        Vec2 baseEndPos(Vec2 a, Vec2 b, double bAngle)
         {
             KotsubuMath& math = getInstance();  // 親クラスの静的ではないメソッドを利用する
             Vec2   abV(a - b);                                  // 斜辺ベクトル
             double abDir = math.direction(abV);                 // 斜辺の傾き
-            double bcDir = fmod(abDir + hypotTilt, TwoPi);      // 底辺の傾き
+            double bcDir = abDir + bAngle;                      // 底辺の傾き
             Vec2   bcNormal(math.cos(bcDir), math.sin(bcDir));  // 底辺の正規化ベクトル
 
             // 底辺終点 = 底辺始点 + 底辺の正規化ベクトル * その長さ
@@ -447,6 +472,7 @@ public:
  
         // 【メソッド】斜辺と底辺のなす角（∠b）を返す
         // ＜引数＞ 斜辺ab、底辺bcの座標（それぞれ長さは適当でよい）
+        // ＜戻り値＞ ±180°以下の数。図形が反時計回りのときは正、時計回りのときは負
         double angleB(Vec2 a, Vec2 b, Vec2 c)
         {
             KotsubuMath& math = getInstance();  // 親クラスの静的ではないメソッドを利用する
@@ -473,7 +499,7 @@ public:
         // まず、点の線分に対する「垂線」を考える。
         // 交点が線分上にあるなら、垂線の長さが「最短距離」となる。
         // 線分上に無いなら、近いほうの線分端までが「最短距離」となる。
-        // また、戻り値が、ある半径以下かどうかを見て「円と線分の衝突判定」に利用できる
+        // これは、戻り値が「ある半径以内」かどうかを見て「円と線分の衝突判定」に利用できる
         static double distance(Vec2 point, Line line)
         {
             Vec2   lineV(line.endPos - line.startPos);
