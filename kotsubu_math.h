@@ -107,7 +107,7 @@ public:
     // radianに「1周 + 30°」を指定した場合は、周を省いた「30°」で計算する（負数も同様）
     double sin(double radian)
     {
-        int id = abs(static_cast<int>(radian * Sin.Resolution)) % Sin.ScaledTwoPi;
+        int id = std::abs(static_cast<int>(radian * Sin.Resolution)) % Sin.ScaledTwoPi;
 
         if (id < Sin.TableMax)
             return (radian < 0.0) ? -Sin.table[id] :  Sin.table[id];
@@ -135,7 +135,7 @@ public:
     // 上記は<cmath>の場合、NaNを返す
     double asin(double ratio)
     {
-        int id = abs(static_cast<int>(ratio * ratio * Asin.TableMax + RoundFix));
+        int id = std::abs(static_cast<int>(ratio * ratio * Asin.TableMax + RoundFix));
         if (id >= Asin.TableMax) id = Asin.TableMax - 1;
 
         return (ratio < 0.0) ? -Asin.table[id] : Asin.table[id];
@@ -256,9 +256,9 @@ public:
 
 
 
-    // 【メソッド】ベクトルaから見た「bの方向」を返す
+    // 【メソッド】ベクトルaから見た「bの方角」を返す
     // ＜戻り値＞ -180°から180°のradian（時計回りを正）
-    // aから見たbの方向は、+と-の2通りが存在する。このメソッドでは近い方（±180°を超えない方）を返す。
+    // aから見たbの方角は、+と-の2通りが存在する。このメソッドでは近い方（±180°を超えない方）を返す。
     // よって、戻り値の符号だけ（-0.1とか0.1）をaに足し込むと、段々bの方に向かせることができる。
     // また、bがaの「左右どちらにあるか」の判定にも使えるが、外積のほうが高速。
     // ・戻り値の範囲違いの類似処理
@@ -359,6 +359,8 @@ public:
         // 【メソッド】底辺の長さを返す（内積）
         // 斜辺abと長さ不定の底辺bcから直角三角形を定義して、底辺の長さを算出する
         // ＜引数＞ 斜辺ab、底辺bcの座標（底辺の長さは適当でよい）
+        // 頂点abcの関係が「鈍角（90°以上）」のときは、通常の直角三角形は定義できない。
+        // その場合は、直線bc上に「反転された直角三角形」を形成して結果を求める。
         static double baseLen(Vec2 a, Vec2 b, Vec2 c)
         {
             // ふつうの三角形を定義
@@ -376,8 +378,10 @@ public:
 
 
         // 【メソッド】底辺の長さを返す（内積）
-        // 斜辺abと傾き(斜辺と底辺の内角)から直角三角形を定義して、底辺の長さを算出する
-        // ＜引数＞ 斜辺abの座標、傾き(斜辺と底辺の内角)の弧度
+        // 斜辺abと傾き（斜辺から見た底辺の方角）から直角三角形を定義して、底辺の長さを算出する
+        // ＜引数＞ 斜辺abの座標、傾き（radian）
+        // 傾きは、通常±90°未満を指定する。正で反時計回り、負で時計回りの図形となる。
+        // また、±90°を超えると「高さの辺」が斜辺をまたいで図形が反転する。
         double baseLen(Vec2 a, Vec2 b, double bAngle)
         {
             KotsubuMath& math = getInstance();  // 親クラスの静的ではないメソッドを利用する
@@ -386,7 +390,7 @@ public:
             double bcDir = fmod(abDir + bAngle, TwoPi);         // 底辺の傾き
             Vec2   bcNormal(math.cos(bcDir), math.sin(bcDir));  // 底辺の正規化ベクトル
 
-            // 直角三角形の底辺長 = abと正規化bcの内積
+            // 直角三角形の底辺長 = abと正規化bcの内積。
             // これは、斜辺を線分bcに正投影したときの「影の長さ」に相当。
             // もし、影が逆方向（線分始点より手前。鈍角）なら負の数になる
             return innerProduct(abV, bcNormal);
@@ -397,6 +401,8 @@ public:
         // 【メソッド】高さを返す（外積）
         // 斜辺abと長さ不定の底辺bcから直角三角形を定義して、高さを算出する
         // ＜引数＞ 斜辺ab、底辺bcの座標（底辺の長さは適当でよい）
+        // 頂点abcの関係が「鈍角（90°以上）」のときは、通常の直角三角形は定義できない。
+        // その場合は、直線bc上に「反転された直角三角形」を形成して結果を求める。
         static double height(Vec2 a, Vec2 b, Vec2 c)
         {
             // ふつうの三角形を定義
@@ -406,16 +412,18 @@ public:
             if (bcLen < Epsilon) return 0.0;
 
             // 直角三角形の高さ = abとbcの外積を、bc長で割る。
-            // これは、点aの線分bcに対する「垂線」に相当。
-            // 点が線分の「左右どちらにあるかで符号が変わる」ため絶対値にする
-            return abs(outerProduct(abV, bcV) / bcLen);
+            // これは、点aを通る線分bcの「垂線」に相当。
+            // absは、点が線分の「左右どちらにあるかで符号が変わる」ため
+            return std::abs(outerProduct(abV, bcV) / bcLen);
         }
         
 
 
         // 【メソッド】高さを返す（外積）
-        // 斜辺abと傾き(斜辺と底辺の内角)から直角三角形を定義して、底辺の長さを算出する
-        // ＜引数＞ 斜辺abの座標、斜辺の傾き（radian）
+        // 斜辺abと傾き（斜辺から見た底辺の方角）から直角三角形を定義して、高さを算出する
+        // ＜引数＞ 斜辺abの座標、傾き（radian）
+        // 傾きは、通常±90°未満を指定する。正で反時計回り、負で時計回りの図形となる。
+        // また、±90°を超えると「高さの辺」が斜辺をまたいで図形が反転する。
         double height(Vec2 a, Vec2 b, double bAngle)
         {
             KotsubuMath& math = getInstance();  // 親クラスの静的ではないメソッドを利用する
@@ -427,15 +435,17 @@ public:
             // 直角三角形の高さ = abと正規化bcの外積。
             // これは、点aを通る線分bcの「垂線」に相当。
             // absは、点が線分の「左右どちらにあるかで符号が変わる」ため
-            return abs(outerProduct(abV, bcNormal));
+            return std::abs(outerProduct(abV, bcNormal));
         }
 
 
 
-        // 【メソッド】底辺終点（頂点c）の座標を返す
-        // 斜辺abと長さ不定の底辺bcから直角三角形を定義して、頂点cの座標を算出する。
-        // これは、斜辺を地面に正投影したときの「影の終わりの位置」、または底辺と高さの「交点」に相当。
+        // 【メソッド】底辺終点の座標を返す（直角三角形の頂点c）
+        // 斜辺abと長さ不定の底辺bcから直角三角形を定義して、底辺終点の座標を算出する。
+        // これは、斜辺を地面に正投影したときの「影の終わりの位置」に相当する。
         // ＜引数＞ 斜辺ab、底辺bcの座標（底辺の長さは適当でよい）
+        // 頂点abcの関係が「鈍角（90°以上）」のときは、通常の直角三角形は定義できない。
+        // その場合は、直線bc上に「反転された直角三角形」を形成して結果を求める。
         static Vec2 baseEndPos(Vec2 a, Vec2 b, Vec2 c)
         {
             // ふつうの三角形を定義
@@ -450,11 +460,11 @@ public:
         
 
 
-        // 【メソッド】底辺終点（頂点c）の座標を返す
-        // 斜辺abと傾き（斜辺から見た底辺の方向）から直角三角形を定義して、頂点cの座標を算出する。
-        // これは、斜辺を地面に正投影したときの「影の終わりの位置」、または底辺と高さの「交点」に相当。
-        // ＜引数＞ 斜辺abの座標、斜辺の傾き（radian）
-        // 斜辺の傾きは、通常±90°未満を指定する。正で反時計回り、負で時計回りの図形となる。
+        // 【メソッド】底辺終点の座標を返す（直角三角形の頂点c）
+        // 斜辺abと傾き（斜辺から見た底辺の方角）から直角三角形を定義して、底辺終点の座標を算出する。
+        // これは、斜辺を地面に正投影したときの「影の終わりの位置」に相当する。
+        // ＜引数＞ 斜辺abの座標、傾き（radian）
+        // 傾きは、通常±90°未満を指定する。正で反時計回り、負で時計回りの図形となる。
         // また、±90°を超えると「高さの辺」が斜辺をまたいで図形が反転する。
         Vec2 baseEndPos(Vec2 a, Vec2 b, double bAngle)
         {
@@ -515,7 +525,7 @@ public:
                 return KotsubuMath::distance(point, line.endPos);
             
             // 上記以外（交点が線分上にある）なら、垂線の長さが最短距離
-            return abs(outerProduct(point - line.startPos, lineV)) / lineLen;
+            return std::abs(outerProduct(point - line.startPos, lineV)) / lineLen;
         }
 
 
