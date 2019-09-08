@@ -14,7 +14,7 @@ PROG     := a.exe
 RESRC    :=
 SUB_DIR  := 
 SUB_OBJS := 
-OBJS     := $(addsuffix .o, $(basename $(wildcard *.cpp)))
+OBJS     := a.o  # $(addsuffix .o, $(basename $(wildcard *.cpp)))
 LIBS     := 
 COMP     := g++
 CFLAGS   := -g -Wall -std=c++17

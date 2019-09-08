@@ -1,5 +1,5 @@
 /**************************************************************************************************
-【ヘッダオンリークラス】kotsubu_math
+【ヘッダオンリークラス】kotsubu_math v1.0
 
 ・概要
   数学一般で使用する、定数、構造体、メソッドを集めたシングルトン。
@@ -194,7 +194,7 @@ public:
         double len = length(v);
         if (len < Epsilon) return v;
 
-        return v *= convDiv2Mul(len);
+        return v *= inverseNumber(len);
     }
 
 
@@ -301,17 +301,18 @@ public:
 
 
 
-    // 【メソッド】「割る数」を「掛ける数」に変換
-    static double convDiv2Mul(double divVal)
+    // 【メソッド】逆数を返す
+    // 「割る数」を「掛ける数」に変換。またはその逆
+    static double inverseNumber(double num)
     {
-        return One / divVal;
+        return One / num;
     }
 
 
 
     // 【メソッド】度数をラジアンに変換
-    // 0～2πの範囲に整形する。通常は degree * KotsubuMath::Deg2Rad でよい
-    static double convRadian(double degree)
+    // 0～2πの範囲に調整する。通常は「degree * KotsubuMath::Deg2Rad」でよい
+    static double toRadian(double degree)
     {
         if (degree < 0.0) {
             degree = fmod(degree, 360.0) + 360.0;
@@ -326,8 +327,8 @@ public:
 
 
     // 【メソッド】度数の角度範囲をラジアンに変換
-    // 0～2πの範囲に整形する
-    static double convRadianRange(double degreeRange)
+    // 0°未満は0、360°より大きいなら2πに制限する
+    static double toRadianRange(double degreeRange)
     {
         if (degreeRange <   0.0) degreeRange = 0.0;
         if (degreeRange > 360.0) degreeRange = 360.0;
@@ -337,12 +338,20 @@ public:
 
 
 
+    // 【メソッド】割った余りを返す（std::fmodより高速）
+    static double fmod(double num, double divNum)
+    {
+        return num - divNum * static_cast<int>(num / divNum);
+    }
+
+
+
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////
     // 【内部クラス】直角三角形の性質
     // 直角三角形の定義  ---  ⊿abc, 頂点は上から反時計回りにa,b,cとする。斜辺はab、頂点cは直角
-    // このクラスは、実用性よりも学習、コピペ向け
+    // このクラスは、実用性よりも学習、コピペ向けに実装
     //
     class RightTriangle
     {
@@ -387,7 +396,7 @@ public:
             KotsubuMath& math = getInstance();  // 親クラスの静的ではないメソッドを利用する
             Vec2   abV(a - b);                                  // 斜辺ベクトル
             double abDir = math.direction(abV);                 // 斜辺の傾き
-            double bcDir = fmod(abDir + bAngle, TwoPi);         // 底辺の傾き
+            double bcDir = abDir + bAngle;                      // 底辺の傾き
             Vec2   bcNormal(math.cos(bcDir), math.sin(bcDir));  // 底辺の正規化ベクトル
 
             // 直角三角形の底辺長 = abと正規化bcの内積。
@@ -452,7 +461,7 @@ public:
             Vec2 abV(a - b);             // 斜辺ベクトル
             Vec2 bcV(c - b);             // 底辺ベクトル
             double bcLen = length(bcV);  // 底辺の長さ（まだ直角三角形にしたときの底辺は不明）
-            if (bcLen < Epsilon) return Vec2(0.0, 0.0);
+            if (bcLen < Epsilon) return b;  // 底辺の長さが0の場合は「頂点b = 底辺終点」となる
 
             // 底辺終点 = 底辺始点 + 底辺ベクトル * その割合
             return b + bcV * innerProduct(abV, bcV) / (bcLen * bcLen);
@@ -500,7 +509,7 @@ public:
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////
     // 【内部クラス】点と線分の性質
-    // このクラスは、実用性よりも学習、コピペ向け
+    // このクラスは、実用性よりも学習、コピペ向けに実装
     //
     class PointAndLine
     {
@@ -514,7 +523,9 @@ public:
         {
             Vec2   lineV(line.endPos - line.startPos);
             double lineLen = length(lineV);
-            if (lineLen < Epsilon) return 0.0;
+            // 線分が短すぎる場合は、正常な計算ができない。点⇔線分始点の距離を返して終了
+            if (lineLen < Epsilon)
+                return KotsubuMath::distance(point, line.startPos);
 
             // 点⇔線分始点を結ぶ辺が「鈍角」なら、始点が最も近い
             if (innerProduct(point - line.startPos, lineV) < 0.0)
@@ -565,6 +576,12 @@ public:
             Vec2 vecCA(posA - posC);
             Vec2 vecCB(posB - posC);
             
+            // 線分と線分の交差判定の方法（他にも様々な方法がある）
+            // 1. 直線ABからみて、線分CDの頂点Cが左側にあり、かつ頂点Dが右側にある。
+            // 2. 直線CDからみて、線分ABの頂点Aが左側にあり、かつ頂点Bが右側にある。
+            // 上記1と2を満たすとき、交差している。
+            // 「直線ABと頂点Cの外積 * 直線ABと頂点Dの外積」で、直線ABに線分CDがまたいでいるかが分かる。
+            // 「正*正>0, 正*負<0, 負*負>0」の性質を利用している（左側と右側が入れ替わっても同じ）
             return (outerProduct(vecAB, vecAC) * outerProduct(vecAB, vecAD) < 0.0) &&
                    (outerProduct(vecCD, vecCA) * outerProduct(vecCD, vecCB) < 0.0);
         }
@@ -608,15 +625,15 @@ public:
         // ＜引数＞
         // point --- 点の座標
         // boxLeft, boxTop, boxRight, boxBottom --- 矩形の座標
-        static bool pointInBox(Vec2 point, double boxLeft, double boxTop, double boxRight, double boxBottom)
+        static bool pointOnBox(Vec2 point, double boxLeft, double boxTop, double boxRight, double boxBottom)
         {
             return (point.x >= boxLeft) && (point.y >= boxTop) &&
                    (point.x < boxRight) && (point.y < boxBottom);
         }
 
-        static bool pointInBox(Vec2 point, Rect box)
+        static bool pointOnBox(Vec2 point, Rect box)
         {
-            return pointInBox(point, box.left, box.top, box.right, box.bottom);
+            return pointOnBox(point, box.left, box.top, box.right, box.bottom);
         }
 
 
@@ -625,10 +642,10 @@ public:
         // ＜引数＞
         // point    --- 点の座標
         // vertices --- 多角形を構成する頂点。vector<Vec2>
-        // ＜補足＞
-        // 正しい結果を得るには、頂点が右回り（左回りなら結果は逆）、閉じた図形、全ての内角は180°以下であること。
-        // 上記の条件を満たさない場合は、エラーにならず不定な動作となる
-        static bool pointInPolygon(Vec2 point, const std::vector<Vec2>& vertices)
+        // ＜正しい結果を得るには＞
+        // 図形の頂点は右回り（左回りなら結果は逆となる）、閉じた図形、全ての内角は180°以下。
+        // 上記を満たさない場合はエラーにならず、不定な動作となる
+        static bool pointOnPolygon(Vec2 point, const std::vector<Vec2>& vertices)
         {
             // 頂点nと頂点n+1を結ぶ辺から見て、点が「左側」にあった時点で判定をやめる
             for (int i = 0, edgeQty = vertices.size() - 1; i < edgeQty; ++i) {

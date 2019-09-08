@@ -2,6 +2,6 @@
 *.*
 
 # 例外
-!*.cpp
-!*.h
-!.gitignore
+!a.cpp
+!kotsubu_math.h
+!kotsubu_vec.h
